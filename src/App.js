@@ -60,7 +60,6 @@ function App() {
 
       <section className="catalog-section">
         <h3>Catalogs</h3>
-        {/* Pass CLI configuration as props to the Catalogs component */}
         <Catalogs
           cliPath={cliPath}  
           host={host}
@@ -72,12 +71,26 @@ function App() {
 
       <section className="principal-section">
         <h3>Principals</h3>
-        <Principals />
+        {/* Pass CLI configuration as props to the Principals component */}
+        <Principals
+          cliPath={cliPath}  
+          host={host}
+          port={port}
+          clientId={clientId}
+          clientSecret={clientSecret}
+        />
       </section>
 
       <section className="roles-section">
         <h3>Principal Roles</h3>
-        <PrincipalRoles />
+        {/* Pass CLI configuration as props to the PrincipalRoles component */}
+        <PrincipalRoles
+          cliPath={cliPath}  
+          host={host}
+          port={port}
+          clientId={clientId}
+          clientSecret={clientSecret}
+        />
       </section>
     </div>
   );
