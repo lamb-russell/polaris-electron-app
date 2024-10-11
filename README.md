@@ -1,70 +1,135 @@
-# Getting Started with Create React App
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
-## Available Scripts
+# Polaris Electron App
 
-In the project directory, you can run:
+## Overview
 
-### `npm start`
+The **Polaris Electron App** provides a user-friendly graphical interface to interact with the [Polaris CLI](https://github.com/apache/polaris). The app allows you to manage catalogs, principals, and roles directly from a graphical interface, while internally leveraging the Polaris CLI for command execution.
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+## Features
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+- **Catalog Management**: Create, list, and delete catalogs.
+- **Principal Management**: List and manage principals.
+- **Role Management**: Manage roles and assign them to principals.
+- **Configuration**: Easily configure CLI path, host, port, client ID, and client secret through the UI.
 
-### `npm test`
+## Requirements
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+Before running the Polaris Electron App, ensure you have the following installed:
 
-### `npm run build`
+- [Node.js](https://nodejs.org/) (v14 or later)
+- [npm](https://www.npmjs.com/) (usually installed with Node.js)
+- The [Polaris CLI](https://github.com/apache/polaris) installed and accessible on your system
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+## Installation
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+1. Clone the repository:
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+   ```bash
+   git clone https://github.com/yourusername/polaris-electron-app.git
+   ```
 
-### `npm run eject`
+2. Navigate to the app's directory:
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+   ```bash
+   cd polaris-electron-app
+   ```
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+3. Install the required dependencies:
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+   ```bash
+   npm install
+   ```
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+## Usage
 
-## Learn More
+### Running the App in Development Mode
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+To start the app in development mode:
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+1. Ensure your Polaris CLI path and configuration is properly set.
+2. Start the Electron app:
 
-### Code Splitting
+   ```bash
+   npm start
+   ```
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+This will open the app in development mode and automatically launch the React development server.
 
-### Analyzing the Bundle Size
+### Building the App for Production
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+To build the app for production:
 
-### Making a Progressive Web App
+```bash
+npm run build
+```
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+This will create a production-ready build in the `build/` directory. You can then package the app using Electron Builder for various platforms:
 
-### Advanced Configuration
+```bash
+npm run electron-pack
+```
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+### Electron Commands
 
-### Deployment
+- **Start the app**: `npm start`
+- **Build the app**: `npm run build`
+- **Package the app**: `npm run electron-pack`
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
+## Configuration
 
-### `npm run build` fails to minify
+You can configure the following parameters through the app interface:
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+- **CLI Path**: The path to your Polaris CLI binary.
+- **Host**: The hostname of the Polaris server.
+- **Port**: The port number for connecting to the Polaris server.
+- **Client ID**: The client ID for token-based authentication.
+- **Client Secret**: The client secret for token-based authentication.
+
+You can also define these configurations via environment variables by adding a `.env` file in the root of your project:
+
+```bash
+REACT_APP_POLARIS_CLI_PATH=/path/to/polaris/cli
+REACT_APP_POLARIS_HOST=localhost
+REACT_APP_POLARIS_PORT=8181
+REACT_APP_POLARIS_CLIENT_ID=your-client-id
+REACT_APP_POLARIS_CLIENT_SECRET=your-client-secret
+```
+
+## Available Features
+
+### Catalog Management
+
+- **List Catalogs**: Display a list of available catalogs from the Polaris CLI.
+- **Create Catalog**: Add new catalogs by specifying their name, type, storage type, and base location.
+- **Delete Catalog**: Remove existing catalogs from the system.
+
+### Principal Management
+
+- **List Principals**: Display a list of all principals available in the system.
+- **Create Principals**: Add new principals via the interface.
+
+### Role Management
+
+- **List Roles**: View all principal roles.
+- **Assign Roles**: Assign roles to principals directly through the interface.
+
+## Development
+
+### Preload Script
+
+The app uses a **preload script** (`preload.js`) to securely expose the `runCommand` API to the renderer process (React). This API allows the React app to invoke CLI commands via Electron’s IPC (Inter-Process Communication).
+
+### Electron Main Process
+
+The main process (`electron.js`) listens for CLI command invocations from the renderer process, executes the commands using Node.js's `child_process.exec()`, and returns the output back to the React UI.
+
+## Polaris CLI
+
+The app interacts with the [Polaris CLI](https://github.com/apache/polaris), an open-source platform for managing data catalogs, principals, and roles. You must install the Polaris CLI on your system before using this Electron app.
+
+To install the Polaris CLI, follow the installation instructions in the [Polaris CLI GitHub repository](https://github.com/apache/polaris).
+
+## License
+
+This project is licensed under the **Apache License 2.0** - see the [LICENSE](LICENSE) file for details.
