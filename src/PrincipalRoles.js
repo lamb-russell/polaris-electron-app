@@ -2,14 +2,10 @@ import React, { useState, useEffect } from 'react';
 
 const PrincipalRoles = ({ cliPath, host, port, clientId, clientSecret }) => {
   const [roles, setRoles] = useState([]);
-  const [newRole, setNewRole] = useState({
-    principalRole: '',
-  });
-  const [grantInfo, setGrantInfo] = useState({
-    principal: '',
-    principalRole: ''
-  });
-  const [revokeInfo, setRevokeInfo] = useState({
+  const [principals, setPrincipals] = useState([]);
+  const [principalRoles, setPrincipalRoles] = useState([]);  // To track which roles are assigned to principals
+
+  const [selectedInfo, setSelectedInfo] = useState({
     principal: '',
     principalRole: ''
   });
@@ -33,57 +29,61 @@ const PrincipalRoles = ({ cliPath, host, port, clientId, clientSecret }) => {
     }
   };
 
-  // Function to create a new principal role
-  const handleCreateRole = async () => {
-    const { principalRole } = newRole;
-    if (!principalRole) {
-      alert('Role name is required');
-      return;
-    }
-
+  // Function to fetch the list of principals from the Polaris CLI
+  const fetchPrincipals = async () => {
     const args = [
       '--host', host,
       '--port', port,
       '--client-id', clientId,
       '--client-secret', clientSecret,
-      'principal-roles', 'create', principalRole
+      'principals', 'list'
     ];
 
     try {
-      await window.api.runCommand(cliPath, args);
-      alert('Principal role created successfully');
-      setNewRole({ principalRole: '' });
-      fetchPrincipalRoles();  // Refresh the list after creation
+      const output = await window.api.runCommand(cliPath, args);
+      const principalData = output.split('\n').filter(line => line).map(JSON.parse);
+      setPrincipals(principalData);
     } catch (error) {
-      console.error('Error creating principal role:', error);
+      console.error('Error fetching principals:', error);
     }
   };
 
-  // Function to delete a principal role
-  const handleDeleteRole = async (principalRole) => {
-    const confirmDelete = window.confirm(`Are you sure you want to delete the role "${principalRole}"?`);
-    if (!confirmDelete) return;
-
+  // Function to fetch roles assigned to a specific principal
+  const fetchPrincipalRolesForPrincipal = async (principal) => {
     const args = [
       '--host', host,
       '--port', port,
       '--client-id', clientId,
       '--client-secret', clientSecret,
-      'principal-roles', 'delete', principalRole
+      'principal-roles', 'list',
+      '--principal', principal
     ];
 
     try {
-      await window.api.runCommand(cliPath, args);
-      alert('Principal role deleted successfully');
-      fetchPrincipalRoles();  // Refresh the list after deletion
+      const output = await window.api.runCommand(cliPath, args);
+      const assignedRoles = output.split('\n').filter(line => line).map(JSON.parse);
+      return assignedRoles;
     } catch (error) {
-      console.error('Error deleting principal role:', error);
+      console.error(`Error fetching roles for principal ${principal}:`, error);
+      return [];
     }
   };
 
-  // Function to grant a principal role to a principal
-  const handleGrantRole = async () => {
-    const { principal, principalRole } = grantInfo;
+  // Function to load all principals with their assigned roles
+  const loadPrincipalRoles = async () => {
+    const principalRoleAssignments = [];
+
+    for (const principal of principals) {
+      const assignedRoles = await fetchPrincipalRolesForPrincipal(principal.name);
+      principalRoleAssignments.push({ principal: principal.name, roles: assignedRoles });
+    }
+
+    setPrincipalRoles(principalRoleAssignments);
+  };
+
+  // Function to assign a role to a principal
+  const handleAssignRole = async () => {
+    const { principal, principalRole } = selectedInfo;
     if (!principal || !principalRole) {
       alert('Both principal and principal role are required');
       return;
@@ -100,19 +100,18 @@ const PrincipalRoles = ({ cliPath, host, port, clientId, clientSecret }) => {
 
     try {
       await window.api.runCommand(cliPath, args);
-      alert('Principal role granted successfully');
-      setGrantInfo({ principal: '', principalRole: '' });
-      fetchPrincipalRoles();  // Refresh the list after granting
+      alert('Role assigned successfully');
+      loadPrincipalRoles();  // Reload the list after assignment
     } catch (error) {
-      console.error('Error granting principal role:', error);
+      console.error('Error assigning role to principal:', error);
     }
   };
 
-  // Function to revoke a principal role from a principal
+  // Function to revoke a role from a principal
   const handleRevokeRole = async () => {
-    const { principal, principalRole } = revokeInfo;
+    const { principal, principalRole } = selectedInfo;
     if (!principal || !principalRole) {
-      alert('Both principal and principal role are required');
+      alert('Both principal and principal role are required to revoke');
       return;
     }
 
@@ -127,91 +126,83 @@ const PrincipalRoles = ({ cliPath, host, port, clientId, clientSecret }) => {
 
     try {
       await window.api.runCommand(cliPath, args);
-      alert('Principal role revoked successfully');
-      setRevokeInfo({ principal: '', principalRole: '' });
-      fetchPrincipalRoles();  // Refresh the list after revoking
+      alert('Role revoked successfully');
+      loadPrincipalRoles();  // Reload the list after revocation
     } catch (error) {
-      console.error('Error revoking principal role:', error);
+      console.error('Error revoking role from principal:', error);
     }
   };
 
   useEffect(() => {
+    fetchPrincipals();
     fetchPrincipalRoles();
   }, [cliPath, host, port, clientId, clientSecret]);
+
+  // After principals are loaded, fetch the roles assigned to them
+  useEffect(() => {
+    if (principals.length > 0) {
+      loadPrincipalRoles();
+    }
+  }, [principals]);
 
   return (
     <div>
       <h2>Principal Roles</h2>
 
-      <button onClick={fetchPrincipalRoles}>List Principal Roles</button>
+      {/* Shared dropdowns for both assigning and revoking roles */}
+      <h3>Assign or Revoke Role for a Principal</h3>
+      <select
+        value={selectedInfo.principal}
+        onChange={(e) => setSelectedInfo({ ...selectedInfo, principal: e.target.value })}
+      >
+        <option value="">Select Principal</option>
+        {principals.map((principal) => (
+          <option key={principal.name} value={principal.name}>
+            {principal.name}
+          </option>
+        ))}
+      </select>
 
-      <table>
-        <thead>
-          <tr>
-            <th>Role Name</th>
-            <th>Principal</th>
-            <th>Catalog</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {roles.length === 0 ? (
+      <select
+        value={selectedInfo.principalRole}
+        onChange={(e) => setSelectedInfo({ ...selectedInfo, principalRole: e.target.value })}
+      >
+        <option value="">Select Principal Role</option>
+        {roles.map((role) => (
+          <option key={role.name} value={role.name}>
+            {role.name}
+          </option>
+        ))}
+      </select>
+
+      {/* Buttons for Assigning or Revoking a Role */}
+      <button onClick={handleAssignRole}>Assign Role</button>
+      <button onClick={handleRevokeRole}>Revoke Role</button>
+
+      {/* Display principals and the roles they are assigned */}
+      <h3>Principals and Assigned Roles</h3>
+      {principalRoles.length === 0 ? (
+        <p>No roles assigned to principals yet.</p>
+      ) : (
+        <table>
+          <thead>
             <tr>
-              <td colSpan="4">No principal roles available.</td>
+              <th>Principal</th>
+              <th>Assigned Roles</th>
             </tr>
-          ) : (
-            roles.map((role, index) => (
+          </thead>
+          <tbody>
+            {principalRoles.map((pr, index) => (
               <tr key={index}>
-                <td>{role.name}</td>
-                <td>{role.principal || 'N/A'}</td>
-                <td>{role.catalog || 'N/A'}</td>
+                <td>{pr.principal}</td>
                 <td>
-                  <button onClick={() => handleDeleteRole(role.name)}>Delete</button>
+                  {pr.roles.length > 0 ? pr.roles.map((role) => role.name).join(', ') : 'No roles assigned'}
                 </td>
               </tr>
-            ))
-          )}
-        </tbody>
-      </table>
-
-      <h3>Create New Principal Role</h3>
-      <input
-        type="text"
-        placeholder="Principal Role"
-        value={newRole.principalRole}
-        onChange={(e) => setNewRole({ ...newRole, principalRole: e.target.value })}
-      />
-      <button onClick={handleCreateRole}>Create Role</button>
-
-      <h3>Grant Role to Principal</h3>
-      <input
-        type="text"
-        placeholder="Principal"
-        value={grantInfo.principal}
-        onChange={(e) => setGrantInfo({ ...grantInfo, principal: e.target.value })}
-      />
-      <input
-        type="text"
-        placeholder="Principal Role"
-        value={grantInfo.principalRole}
-        onChange={(e) => setGrantInfo({ ...grantInfo, principalRole: e.target.value })}
-      />
-      <button onClick={handleGrantRole}>Grant Role</button>
-
-      <h3>Revoke Role from Principal</h3>
-      <input
-        type="text"
-        placeholder="Principal"
-        value={revokeInfo.principal}
-        onChange={(e) => setRevokeInfo({ ...revokeInfo, principal: e.target.value })}
-      />
-      <input
-        type="text"
-        placeholder="Principal Role"
-        value={revokeInfo.principalRole}
-        onChange={(e) => setRevokeInfo({ ...revokeInfo, principalRole: e.target.value })}
-      />
-      <button onClick={handleRevokeRole}>Revoke Role</button>
+            ))}
+          </tbody>
+        </table>
+      )}
     </div>
   );
 };
