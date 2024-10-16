@@ -3,6 +3,8 @@ import './App.css';
 import Catalogs from './Catalogs';
 import Principals from './Principals';
 import PrincipalRoles from './PrincipalRoles';
+import CatalogRoles from './CatalogRoles';
+
 
 // Access environment variables
 const DEFAULT_POLARIS_CLI_PATH = process.env.REACT_APP_POLARIS_CLI_PATH || './polaris';
@@ -92,6 +94,17 @@ function App() {
           clientSecret={clientSecret}
         />
       </section>
+        
+    
+    <section className="roles-section">
+      <CatalogRoles
+        cliPath={cliPath}  
+        host={host}
+        port={port}
+        clientId={clientId}
+        clientSecret={clientSecret}
+      />
+    </section>
     </div>
   );
 }

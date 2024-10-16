@@ -1,60 +1,60 @@
 import React, { useState, useEffect } from 'react';
 
-const PrincipalRoles = ({ cliPath, host, port, clientId, clientSecret }) => {
+const CatalogRoles = ({ cliPath, host, port, clientId, clientSecret }) => {
   const [roles, setRoles] = useState([]);
-  const [principals, setPrincipals] = useState([]);
+  const [catalogs, setCatalogs] = useState([]);
   const [assignedRoles, setAssignedRoles] = useState({});
   const [selectedInfo, setSelectedInfo] = useState({
-    principal: '',
+    catalog: '',
     role: ''
   });
 
-  const [newRole, setNewRole] = useState('');  // For creating a new principal role
-  const [roleToDelete, setRoleToDelete] = useState('');  // For deleting a principal role
+  const [newRole, setNewRole] = useState('');  // For creating a new catalog role
+  const [roleToDelete, setRoleToDelete] = useState('');  // For deleting a catalog role
 
-  // Function to fetch principals and their assigned roles
-  const fetchPrincipalsWithRoles = async () => {
-    const principalArgs = [
+  const fetchCatalogsWithRoles = async () => {
+    const catalogArgs = [
       '--host', host,
       '--port', port,
       '--client-id', clientId,
       '--client-secret', clientSecret,
-      'principals', 'list'
+      'catalogs', 'list'
     ];
-
+  
     try {
-      const principalOutput = await window.api.runCommand(cliPath, principalArgs);
-      const principalData = principalOutput.split('\n').filter(line => line).map(line => JSON.parse(line));
-      setPrincipals(principalData);
-
+      const catalogOutput = await window.api.runCommand(cliPath, catalogArgs);
+      const catalogData = catalogOutput.split('\n').filter(line => line).map(line => JSON.parse(line));
+      setCatalogs(catalogData);
+  
       const newAssignedRoles = {};
-      for (const principal of principalData) {
+      for (const catalog of catalogData) {
         const roleArgs = [
           '--host', host,
           '--port', port,
           '--client-id', clientId,
           '--client-secret', clientSecret,
-          'principal-roles', 'list',
-          '--principal', principal.name
+          'catalog-roles', 'list',
+          catalog.name // Pass the catalog name as a positional argument (e.g., "my_warehouse")
         ];
         const roleOutput = await window.api.runCommand(cliPath, roleArgs);
         const roleData = roleOutput.split('\n').filter(line => line).map(line => JSON.parse(line).name);
-        newAssignedRoles[principal.name] = roleData;
+        newAssignedRoles[catalog.name] = roleData;
       }
       setAssignedRoles(newAssignedRoles);
     } catch (error) {
-      console.error('Error fetching principals and roles:', error);
+      console.error('Error fetching catalogs and roles:', error);
     }
   };
+  
 
-  // Function to fetch available roles
+  // Function to fetch available catalog roles
   const fetchRoles = async () => {
     const args = [
       '--host', host,
       '--port', port,
       '--client-id', clientId,
       '--client-secret', clientSecret,
-      'principal-roles', 'list'
+      'catalog-roles', 'list'
     ];
 
     try {
@@ -62,92 +62,96 @@ const PrincipalRoles = ({ cliPath, host, port, clientId, clientSecret }) => {
       const roleData = output.split('\n').filter(line => line).map(line => JSON.parse(line));
       setRoles(roleData);
     } catch (error) {
-      console.error('Error fetching roles:', error);
+      console.error('Error fetching catalog roles:', error);
     }
   };
 
-  // Function to assign a role to a principal
   const handleAssignRole = async () => {
-    const { principal, role } = selectedInfo;
-    if (!principal || !role) {
-      alert('Please select both a principal and a role.');
+    const { catalog, role } = selectedInfo;
+    if (!catalog || !role) {
+      alert('Please select both a catalog and a role.');
       return;
     }
-
+  
     const args = [
       '--host', host,
       '--port', port,
       '--client-id', clientId,
       '--client-secret', clientSecret,
-      'principal-roles', 'grant',
-      '--principal', principal,
-      role
+      'catalog-roles', 'grant',
+      role, // Role is passed as positional argument (e.g., "catalog_admin")
+      '--catalog', catalog, // Catalog is passed as a named argument (e.g., "my_warehouse")
+      '--principal-role', role // Principal role for the catalog
     ];
-
+  
     try {
       await window.api.runCommand(cliPath, args);
       alert('Role assigned successfully');
-      fetchPrincipalsWithRoles(); // Refresh roles
+      fetchCatalogsWithRoles(); // Refresh roles
     } catch (error) {
       console.error('Error assigning role:', error);
     }
   };
+  
+  
 
-  // Function to remove a role from a principal
   const handleDeleteRole = async () => {
-    const { principal, role } = selectedInfo;
-    if (!principal || !role) {
-      alert('Please select both a principal and a role to remove.');
+    const { catalog, role } = selectedInfo;
+    if (!catalog || !role) {
+      alert('Please select both a catalog and a role to remove.');
       return;
     }
-
+  
     const args = [
       '--host', host,
       '--port', port,
       '--client-id', clientId,
       '--client-secret', clientSecret,
-      'principal-roles', 'revoke',
-      '--principal', principal,
-      role
+      'catalog-roles', 'revoke',
+      role, // Role is passed as positional argument
+      '--catalog', catalog, // Catalog is passed as a named argument
+      '--principal-role', role // Principal role to revoke from the catalog
     ];
-
+  
     try {
       await window.api.runCommand(cliPath, args);
       alert('Role removed successfully');
-      fetchPrincipalsWithRoles(); // Refresh roles
+      fetchCatalogsWithRoles(); // Refresh roles
     } catch (error) {
       console.error('Error removing role:', error);
     }
   };
+  
 
-  // Function to create a new principal role
   const handleCreateRole = async () => {
-    if (!newRole) {
-      alert('Please enter a role name.');
+    if (!newRole || !selectedInfo.catalog) {
+      alert('Please enter a role name and select a catalog.');
       return;
     }
-
+  
     const args = [
       '--host', host,
       '--port', port,
       '--client-id', clientId,
       '--client-secret', clientSecret,
-      'principal-roles', 'create',
-      newRole  // Role is a positional argument
+      'catalog-roles', 'create',
+      newRole, // Role name as a positional argument
+      '--catalog', selectedInfo.catalog // Catalog as a named argument
     ];
-
+  
     try {
       await window.api.runCommand(cliPath, args);
-      alert(`Role "${newRole}" created successfully`);
+      alert(`Role "${newRole}" created successfully for catalog "${selectedInfo.catalog}"`);
       setNewRole(''); // Clear input
       fetchRoles(); // Refresh the roles list
     } catch (error) {
       console.error('Error creating role:', error);
     }
   };
+  
 
-  // Function to delete a principal role
-  const handleDeletePrincipalRole = async () => {
+  // Function to delete a catalog role
+  const handleDeleteCatalogRole = async () => {
     if (!roleToDelete) {
       alert('Please select a role to delete.');
       return;
@@ -158,7 +162,7 @@ const PrincipalRoles = ({ cliPath, host, port, clientId, clientSecret }) => {
       '--port', port,
       '--client-id', clientId,
       '--client-secret', clientSecret,
-      'principal-roles', 'delete',
+      'catalog-roles', 'delete',
       roleToDelete  // Role is a positional argument
     ];
 
@@ -171,31 +175,32 @@ const PrincipalRoles = ({ cliPath, host, port, clientId, clientSecret }) => {
       console.error('Error deleting role:', error);
     }
   };
+
   const handleRefresh = async () => {
-    await fetchPrincipalsWithRoles();
+    await fetchCatalogsWithRoles();
     await fetchRoles();
   };
   
   useEffect(() => {
     fetchRoles();
-    fetchPrincipalsWithRoles();
+    fetchCatalogsWithRoles();
   }, [cliPath, host, port, clientId, clientSecret]);
 
   return (
     <div>
-      <h2>Principal Roles Management</h2>
-      <button onClick={handleRefresh}>Refresh Principals and Roles</button> {/* Refresh button */}
+      <h2>Catalog Roles Management</h2>
+      <button onClick={handleRefresh}>Refresh Catalogs and Roles</button> {/* Refresh button */}
   
       <h3>Assign or Remove Role</h3>
       <div>
         <select
-          value={selectedInfo.principal}
-          onChange={(e) => setSelectedInfo({ ...selectedInfo, principal: e.target.value })}
+          value={selectedInfo.catalog}
+          onChange={(e) => setSelectedInfo({ ...selectedInfo, catalog: e.target.value })}
         >
-          <option value="">Select Principal</option>
-          {principals.map((principal, index) => (
-            <option key={index} value={principal.name}>
-              {principal.name}
+          <option value="">Select Catalog</option>
+          {catalogs.map((catalog, index) => (
+            <option key={index} value={catalog.name}>
+              {catalog.name}
             </option>
           ))}
         </select>
@@ -216,7 +221,7 @@ const PrincipalRoles = ({ cliPath, host, port, clientId, clientSecret }) => {
         <button onClick={handleDeleteRole}>Remove Role</button>
       </div>
 
-      <h3>Create New Principal Role</h3>
+      <h3>Create New Catalog Role</h3>
       <div>
         <input
           type="text"
@@ -227,7 +232,7 @@ const PrincipalRoles = ({ cliPath, host, port, clientId, clientSecret }) => {
         <button onClick={handleCreateRole}>Create Role</button>
       </div>
 
-      <h3>Delete Principal Role</h3>
+      <h3>Delete Catalog Role</h3>
       <div>
         <select
           value={roleToDelete}
@@ -240,29 +245,29 @@ const PrincipalRoles = ({ cliPath, host, port, clientId, clientSecret }) => {
             </option>
           ))}
         </select>
-        <button onClick={handleDeletePrincipalRole}>Delete Role</button>
+        <button onClick={handleDeleteCatalogRole}>Delete Role</button>
       </div>
 
-      <h3>Principals and Their Assigned Roles</h3>
+      <h3>Catalogs and Their Assigned Roles</h3>
       <table>
         <thead>
           <tr>
-            <th>Principal</th>
+            <th>Catalog</th>
             <th>Assigned Roles</th>
           </tr>
         </thead>
         <tbody>
-          {principals.length === 0 ? (
+          {catalogs.length === 0 ? (
             <tr>
-              <td colSpan="2">No principals available.</td>
+              <td colSpan="2">No catalogs available.</td>
             </tr>
           ) : (
-            principals.map((principal, index) => (
+            catalogs.map((catalog, index) => (
               <tr key={index}>
-                <td>{principal.name}</td>
+                <td>{catalog.name}</td>
                 <td>
-                  {assignedRoles[principal.name]?.length
-                    ? assignedRoles[principal.name].join(', ')
+                  {assignedRoles[catalog.name]?.length
+                    ? assignedRoles[catalog.name].join(', ')
                     : 'No roles assigned'}
                 </td>
               </tr>
@@ -274,4 +279,4 @@ const PrincipalRoles = ({ cliPath, host, port, clientId, clientSecret }) => {
   );
 };
 
-export default PrincipalRoles;
+export default CatalogRoles;
