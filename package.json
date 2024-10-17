@@ -1,7 +1,7 @@
 {
   "name": "polaris-electron-app",
   "version": "1.0.0",
-  "main": "electron.js",
+  "main": "public/electron.js",
   "author": "Russ Lamb",
   "description": "UI for Polaris Catalog CLI tool",
   "scripts": {
@@ -34,7 +34,7 @@
     },
     "files": [
       "build/**/*",
-      "electron.js"
+      "public/electron.js"
     ],
     "mac": {
       "icon": "assets/icon.icns",
